@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberTrade — Telegram Mini App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        bgMain: '#070a0c',
+                        bgCard: '#10161a',
+                        bgCardHover: '#162026',
+                        bgInput: '#131b20',
+                        turq: {
+                            DEFAULT: '#00e5ff',
+                            dim: '#00b8cc',
+                            dark: '#004d57',
+                            glow: 'rgba(0, 229, 255, 0.15)',
+                            border: 'rgba(0, 229, 255, 0.28)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #070a0c;
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            user-select: none;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #070a0c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00e5ff;
+        }
+        .turq-gradient {
+            background: linear-gradient(135deg, #00e5ff 0%, #00a8cc 100%);
+        }
+        .turq-mesh {
+            background-color: #10161a;
+            background-image: 
+                radial-gradient(at 85% 15%, rgba(0, 229, 255, 0.16) 0px, transparent 55%),
+                radial-gradient(at 15% 85%, rgba(20, 184, 166, 0.10) 0px, transparent 55%);
+        }
+        .radar-grid {
+            background-size: 20px 20px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 229, 255, 0.06) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 229, 255, 0.06) 1px, transparent 1px);
+        }
+        .glass-nav {
+            background: rgba(16, 22, 26, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.25); opacity: 0.4; }
+        }
+        .pulse-dot {
+            animation: pulseGlow 2.2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex justify-center bg-[#040607]">
+
+    <!-- Mobile App Container -->
+    <div class="w-full max-w-[440px] min-h-screen bg-bgMain relative pb-28 shadow-2xl border-x border-white/5 flex flex-col">
+
+        <!-- TOP MODE SWITCHER (Mini App / Chat Preview / Bot Code) -->
+        <div class="sticky top-0 z-40 bg-[#070a0c]/95 backdrop-blur-md border-b border-white/10 px-3 py-2 flex items-center justify-between gap-1.5">
+            <div class="flex items-center gap-1 bg-bgCard p-1 rounded-xl border border-white/5 w-full">
+                <button onclick="switchMode('webapp')" id="mode-webapp" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all bg-turq text-black shadow-sm flex items-center justify-center gap-1.5">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Mini App
+                </button>
+                <button onclick="switchMode('tgchat')" id="mode-tgchat" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center justify-center gap-1.5">
+                    <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Чат бота
+                </button>
+                <button onclick="switchMode('botcode')" id="mode-botcode" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center justify-center gap-1.5">
+                    <i data-lucide="code-2" class="w-3.5 h-3.5"></i> Код бота
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 1: TELEGRAM MINI APP (TURQUOISE-BLACK) -->
+        <!-- ========================================== -->
+        <div id="view-webapp" class="flex-1 flex flex-col">
+
+            <!-- Telegram Mini App Header -->
+            <header class="px-4 pt-3 pb-2 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl turq-gradient flex items-center justify-center text-black font-black text-sm shadow-lg shadow-turq/20">
+                        CT
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-base tracking-tight text-white leading-none flex items-center gap-1.5">
+                            CyberTradeBot
+                            <span class="inline-block w-2 h-2 rounded-full bg-turq"></span>
+                        </h1>
+                        <span class="text-[11px] text-slate-400">бирюзово-черный маркет</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="openModal('modal-city')" class="flex items-center gap-1.5 bg-bgCard hover:bg-bgCardHover border border-turq/30 px-3 py-1.5 rounded-full text-xs font-medium text-slate-200 transition">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-turq"></i>
+                        <span id="current-city-label">Москва</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Greeting & Search Bar -->
+            <div class="px-4 pt-2 pb-3">
+                <p class="text-xs text-slate-400">Добрый день, <span id="user-name-display" class="text-turq font-semibold">Пользователь</span></p>
+                <div class="flex items-center justify-between mt-0.5 mb-3">
+                    <h2 class="text-xl font-extrabold text-white tracking-tight">Что ищем сегодня?</h2>
+                </div>
+
+                <!-- Search & Filter Row -->
+                <div class="flex items-center gap-2.5">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input 
+                            type="text" 
+                            id="search-input"
+                            oninput="handleSearch(this.value)"
+                            placeholder="Поиск по 0 объявлениям" 
+                            class="w-full bg-bgInput border border-white/10 focus:border-turq rounded-2xl pl-10 pr-8 py-3 text-sm text-white placeholder-slate-500 outline-none transition"
+                        >
+                        <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <button onclick="openModal('modal-filter')" class="w-11 h-11 rounded-2xl turq-gradient text-black flex items-center justify-center shadow-lg shadow-turq/20 active:scale-95 transition shrink-0">
+                        <i data-lucide="sliders-horizontal" class="w-5 h-5 stroke-[2.5]"></i>
+                    </button>
+                </div>
+
+                <!-- Active Filter Badge (Hidden by default) -->
+                <div id="active-filter-bar" class="hidden mt-2.5 flex items-center gap-2 flex-wrap">
+                    <span class="text-xs text-slate-400">Фильтр:</span>
+                    <span id="active-filter-tag" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-turq/15 text-turq border border-turq/30">
+                        Все
+                        <button onclick="resetFilters()" class="hover:text-white"><i data-lucide="x" class="w-3 h-3"></i></button>
+                    </span>
+                </div>
+            </div>
+
+            <!-- HOME TAB CONTENT (Bento Grid + Pinned + Feed) -->
+            <div id="tab-home" class="px-4 space-y-4">
+                
+                <!-- Bento Grid (Exact layout from screenshot 2 in Turquoise & Black) -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    
+                    <!-- Left Tall Card: + Продать -->
+                    <div onclick="openCreateModal()" class="row-span-2 turq-gradient rounded-3xl p-4 flex flex-col justify-between cursor-pointer active:scale-[0.98] transition shadow-lg shadow-turq/15 relative overflow-hidden min-h-[176px]">
+                        <!-- Decorative Mascot / Cyber Icon -->
+                        <div class="flex items-start justify-between z-10">
+                            <div class="w-10 h-10 rounded-2xl bg-black/15 backdrop-blur-sm flex items-center justify-center text-black">
+                                <i data-lucide="plus" class="w-7 h-7 stroke-[2.5]"></i>
+                            </div>
+                            <div class="w-16 h-16 rounded-2xl bg-black/15 border border-black/10 flex items-center justify-center -mr-1 -mt-1 shadow-inner">
+                                <i data-lucide="cpu" class="w-9 h-9 text-black/85 stroke-[1.8]"></i>
+                            </div>
+                        </div>
+                        <div class="z-10 mt-4">
+                            <h3 class="text-2xl font-black text-black tracking-tight leading-none">Продать</h3>
+                            <p class="text-xs font-semibold text-black/75 mt-1">выложить свой лот</p>
+                        </div>
+                        <div class="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-white/20 blur-xl pointer-events-none"></div>
+                    </div>
+
+                    <!-- Right Top Card: Листать новое -->
+                    <div onclick="filterByCategory('all', 'Листать новое')" class="turq-mesh border border-white/10 hover:border-turq/40 rounded-3xl p-3.5 flex flex-col justify-between cursor-pointer active:scale-[0.98] transition relative overflow-hidden min-h-[83px]">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-extrabold text-white">Листать новое</span>
+                            <i data-lucide="zap" class="w-4 h-4 text-turq fill-turq"></i>
+                        </div>
+                        <p id="stat-new-count" class="text-xs text-slate-400 font-medium mt-2">0 новых продаж</p>
+                    </div>
+
+                    <!-- Right Bottom Card: Рядом -->
+                    <div onclick="filterByCityOnly()" class="bg-bgCard radar-grid border border-white/10 hover:border-turq/40 rounded-3xl p-3.5 flex flex-col justify-between cursor-pointer active:scale-[0.98] transition relative overflow-hidden min-h-[83px]">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-extrabold text-white">Рядом</span>
+                            <span class="relative flex h-3 w-3">
+                                <span class="pulse-dot absolute inline-flex h-full w-full rounded-full bg-turq opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-turq"></span>
+                            </span>
+                        </div>
+                        <p id="stat-city-count" class="text-xs text-slate-400 font-medium mt-2">0 в городе</p>
+                    </div>
+
+                    <!-- Bottom Left Card: Обмен -->
+                    <div onclick="filterByCategory('Обмен', 'Обмен')" class="bg-bgCard border border-white/10 hover:border-turq/40 rounded-3xl p-3.5 flex flex-col justify-between cursor-pointer active:scale-[0.98] transition min-h-[78px] relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-extrabold text-white">Обмен</span>
+                            <i data-lucide="repeat" class="w-4 h-4 text-turq"></i>
+                        </div>
+                        <p id="stat-trade-count" class="text-xs text-slate-400 font-medium mt-1 truncate">0 предложений</p>
+                    </div>
+
+                    <!-- Bottom Right Card: Куплю -->
+                    <div onclick="filterByCategory('Куплю', 'Куплю')" class="bg-bgCard border border-white/10 hover:border-turq/40 rounded-3xl p-3.5 flex flex-col justify-between cursor-pointer active:scale-[0.98] transition min-h-[78px] relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-extrabold text-white">Куплю</span>
+                            <i data-lucide="shopping-bag" class="w-4 h-4 text-turq"></i>
+                        </div>
+                        <p id="stat-buy-count" class="text-xs text-slate-400 font-medium mt-1 truncate">0 ищут</p>
+                    </div>
+                </div>
+
+                <!-- 3 Action Pills Row (Закрепить / IMEI / Продавец) -->
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="openCreateModal(true)" class="bg-bgCard hover:bg-bgCardHover border border-white/10 hover:border-turq/40 rounded-2xl py-2.5 px-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-200 transition active:scale-95">
+                        <i data-lucide="pin" class="w-3.5 h-3.5 text-turq"></i>
+                        <span class="truncate">Закрепить</span>
+                    </button>
+                    <button onclick="openModal('modal-imei')" class="bg-bgCard hover:bg-bgCardHover border border-white/10 hover:border-turq/40 rounded-2xl py-2.5 px-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-200 transition active:scale-95">
+                        <i data-lucide="scan-barcode" class="w-3.5 h-3.5 text-turq"></i>
+                        <span>IMEI</span>
+                    </button>
+                    <button onclick="switchAppTab('profile')" class="bg-bgCard hover:bg-bgCardHover border border-white/10 hover:border-turq/40 rounded-2xl py-2.5 px-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-200 transition active:scale-95">
+                        <i data-lucide="user-check" class="w-3.5 h-3.5 text-turq"></i>
+                        <span>Продавец</span>
+                    </button>
+                </div>
+
+                <!-- Section: В закрепе (Pinned) -->
+                <div class="pt-1">
+                    <div class="flex items-center justify-between mb-2.5">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="star" class="w-4 h-4 text-turq fill-turq"></i>
+                            <h3 class="text-sm font-bold text-white">В закрепе</h3>
+                            <span id="pinned-counter" class="text-xs text-slate-500">0 мест занято</span>
+                        </div>
+                        <button onclick="openCreateModal(true)" class="px-3 py-1 rounded-xl bg-turq/10 hover:bg-turq/20 border border-turq/30 text-turq text-xs font-semibold transition">
+                            Закрепить свой
+                        </button>
+                    </div>
+
+                    <!-- Pinned Horizontal Scroll Container -->
+                    <div id="pinned-container" class="flex gap-3 overflow-x-auto pb-1">
+                        <!-- Dynamically rendered. Empty slot placeholder if 0 pinned -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- SHARED FEED SECTION (Лента объявлений) -->
+            <div id="feed-section" class="px-4 pt-3 flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <h3 id="feed-heading" class="text-base font-extrabold text-white">Лента</h3>
+                        <span id="feed-total-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-bgCard border border-white/10 text-turq">0</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-xs">
+                        <button onclick="filterByCategory('all', 'Все объявления')" id="cat-btn-all" class="px-2.5 py-1 rounded-lg bg-turq text-black font-bold transition">Все</button>
+                        <button onclick="filterByCategory('Продам', 'Продажа')" id="cat-btn-sell" class="px-2.5 py-1 rounded-lg bg-bgCard text-slate-400 hover:text-white font-medium transition">Продам</button>
+                        <button onclick="filterByCategory('Обмен', 'Обмен')" id="cat-btn-trade" class="px-2.5 py-1 rounded-lg bg-bgCard text-slate-400 hover:text-white font-medium transition">Обмен</button>
+                        <button onclick="filterByCategory('Куплю', 'Покупка')" id="cat-btn-buy" class="px-2.5 py-1 rounded-lg bg-bgCard text-slate-400 hover:text-white font-medium transition">Куплю</button>
+                    </div>
+                </div>
+
+                <!-- 2-Column Listings Grid (Starts 100% Empty!) -->
+                <div id="listings-grid" class="grid grid-cols-2 gap-3 pb-6"></div>
+
+                <!-- Empty State (Shown when there are 0 listings) -->
+                <div id="empty-feed-state" class="my-4 bg-bgCard/70 border border-dashed border-turq/30 rounded-3xl p-7 text-center flex flex-col items-center justify-center">
+                    <div class="w-14 h-14 rounded-2xl bg-turq/10 border border-turq/30 flex items-center justify-center text-turq mb-3">
+                        <i data-lucide="package-plus" class="w-7 h-7"></i>
+                    </div>
+                    <h4 class="text-base font-bold text-white">Объявлений пока нет</h4>
+                    <p class="text-xs text-slate-400 mt-1 max-w-[240px] leading-relaxed">
+                        Лента абсолютно чистая. Кто захочет продать, обменять или купить технику — может выложить свой лот!
+                    </p>
+                    <button onclick="openCreateModal()" class="mt-4 turq-gradient text-black font-extrabold text-xs px-5 py-3 rounded-2xl shadow-lg shadow-turq/20 flex items-center gap-2 active:scale-95 transition">
+                        <i data-lucide="plus-circle" class="w-4 h-4 stroke-[2.5]"></i>
+                        Выложить объявление
+                    </button>
+                </div>
+            </div>
+
+            <!-- PROFILE / MY LISTINGS TAB (Hidden by default) -->
+            <div id="tab-profile" class="hidden px-4 pt-2 pb-6 space-y-4">
+                <div class="bg-bgCard border border-white/10 rounded-3xl p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-14 h-14 rounded-2xl turq-gradient flex items-center justify-center text-black font-black text-xl shadow-lg shadow-turq/20">
+                            <i data-lucide="user" class="w-7 h-7 stroke-[2.5]"></i>
+                        </div>
+                        <div>
+                            <h3 id="profile-username" class="text-base font-bold text-white">Пользователь</h3>
+                            <p class="text-xs text-turq font-medium flex items-center gap-1 mt-0.5">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Верифицирован через Telegram
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="clearAllListings()" title="Очистить мои данные" class="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-semibold transition">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="grid grid-cols-3 gap-2.5 text-center">
+                    <div class="bg-bgCard border border-white/10 rounded-2xl p-3">
+                        <span id="prof-stat-total" class="text-lg font-black text-turq">0</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Мои лоты</p>
+                    </div>
+                    <div class="bg-bgCard border border-white/10 rounded-2xl p-3">
+                        <span id="prof-stat-fav" class="text-lg font-black text-white">0</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Избранное</p>
+                    </div>
+                    <div class="bg-bgCard border border-white/10 rounded-2xl p-3">
+                        <span id="prof-stat-pinned" class="text-lg font-black text-white">0</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">В закрепе</p>
+                    </div>
+                </div>
+
+                <!-- Sub-tabs: Мои объявления / Избранное -->
+                <div class="flex gap-2 bg-bgCard p-1 rounded-2xl border border-white/10">
+                    <button onclick="switchProfileSubtab('my')" id="prof-sub-my" class="flex-1 py-2 rounded-xl text-xs font-bold bg-turq text-black transition">Мои лоты</button>
+                    <button onclick="switchProfileSubtab('fav')" id="prof-sub-fav" class="flex-1 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition">Избранное ❤️</button>
+                </div>
+
+                <div id="profile-listings-grid" class="grid grid-cols-2 gap-3"></div>
+                <div id="profile-empty-msg" class="text-center py-8 text-xs text-slate-500">
+                    Здесь пока пусто.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 2: TELEGRAM BOT CHAT PREVIEW (SCREEN 1) -->
+        <!-- ========================================== -->
+        <div id="view-tgchat" class="hidden flex-1 flex flex-col bg-[#080d11] p-3">
+            <!-- Chat Header -->
+            <div class="bg-bgCard border border-white/10 rounded-2xl p-3 flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full turq-gradient flex items-center justify-center text-black font-black">
+                    CT
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-sm font-bold text-white leading-tight">CyberTradeBot</h3>
+                    <p class="text-[11px] text-turq">бот • бирюзово-черный стиль</p>
+                </div>
+            </div>
+
+            <!-- Incoming Bot Message Bubble -->
+            <div class="mt-auto space-y-2">
+                <div class="self-end ml-auto bg-turq/20 border border-turq/40 text-white px-3.5 py-1.5 rounded-2xl rounded-br-sm w-fit text-xs font-medium">
+                    /start <span class="text-[10px] text-turq ml-1">14:10 ✓✓</span>
+                </div>
+
+                <!-- Bot Banner + Text Card -->
+                <div class="bg-bgCard border border-turq/25 rounded-3xl overflow-hidden shadow-xl max-w-[340px]">
+                    <!-- Turquoise/Black Banner -->
+                    <div class="h-40 bg-gradient-to-br from-[#062c33] via-[#071318] to-[#00e5ff]/30 relative flex flex-col items-center justify-center p-4 border-b border-turq/20">
+                        <div class="w-14 h-14 rounded-2xl turq-gradient flex items-center justify-center text-black shadow-lg shadow-turq/30 mb-2">
+                            <i data-lucide="Cpu" class="w-8 h-8 stroke-[2.2]"></i>
+                        </div>
+                        <h2 class="text-2xl font-black tracking-tight text-white">Cyber<span class="text-turq">Trade</span></h2>
+                        <span class="text-[10px] uppercase tracking-widest text-turq font-bold mt-0.5">— КУПИ • ПРОДАЙ • ОБМЕНЯЙ —</span>
+                    </div>
+                    <!-- Welcome Text -->
+                    <div class="p-3.5 text-xs space-y-2 text-slate-200 leading-relaxed">
+                        <p>👋 Привет, <b class="text-turq">Пользователь</b>!</p>
+                        <p><b>CyberTrade</b> — купи-продай технику без посредников и комиссий.</p>
+                        <p>📦 Выложи первый лот — это займёт минуту 👇</p>
+                    </div>
+                </div>
+
+                <!-- Inline Keyboard Buttons (Turquoise/Black Style like Screenshot 1) -->
+                <div class="grid grid-cols-2 gap-1.5 max-w-[340px]">
+                    <button onclick="switchMode('webapp'); openCreateModal();" class="bg-turq hover:bg-turq-dim text-black font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md">
+                        🚀 Разместить
+                    </button>
+                    <button onclick="switchMode('webapp')" class="bg-[#0e3a42] hover:bg-[#134e59] border border-turq/40 text-turq font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5">
+                        📱 Приложение
+                    </button>
+                    <button onclick="switchMode('webapp'); switchAppTab('profile');" class="bg-bgCard hover:bg-bgCardHover border border-white/10 text-slate-200 font-semibold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5">
+                        📋 Мои лоты
+                    </button>
+                    <button onclick="switchMode('webapp'); switchAppTab('profile');" class="bg-bgCard hover:bg-bgCardHover border border-white/10 text-slate-200 font-semibold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5">
+                        👤 Профиль
+                    </button>
+                    <button onclick="showToast('Напишите администратору для помощи')" class="bg-bgCard hover:bg-bgCardHover border border-white/10 text-slate-200 font-semibold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5">
+                        ❓ Помощь
+                    </button>
+                    <button onclick="showToast('Канал маркетплейса')" class="bg-bgCard hover:bg-bgCardHover border border-white/10 text-slate-200 font-semibold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5">
+                        📢 Канал ↗
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 3: PYTHON AIOGRAM BOT CODE            -->
+        <!-- ========================================== -->
+        <div id="view-botcode" class="hidden flex-1 flex flex-col p-4 space-y-3">
+            <div class="bg-bgCard border border-turq/30 rounded-2xl p-3.5">
+                <h3 class="text-sm font-bold text-turq flex items-center gap-2">
+                    <i data-lucide="terminal" class="w-4 h-4"></i> Готовый код бота (Python + aiogram 3)
+                </h3>
+                <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                    Сохраните этот HTML-файл на хостинг с HTTPS (например, GitHub Pages или Vercel), вставьте ссылку в <code class="text-turq">WEBAPP_URL</code> ниже и запустите бота.
+                </p>
+                <button onclick="copyBotCode()" class="mt-2.5 w-full py-2 rounded-xl turq-gradient text-black font-bold text-xs flex items-center justify-center gap-1.5">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> Скопировать код bot.py
+                </button>
+            </div>
+
+            <pre id="python-code-block" class="bg-[#050709] border border-white/10 rounded-2xl p-3.5 text-[11px] text-emerald-300 font-mono overflow-x-auto leading-relaxed select-all">import asyncio
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import CommandStart
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+
+BOT_TOKEN = "ВАШ_ТОКЕН_ОТ_BOTFATHER"
+WEBAPP_URL = "https://ваш-домен.ru/index.html"
+
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
+
+@dp.message(CommandStart())
+async def start_cmd(message: types.Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🚀 Разместить", web_app=WebAppInfo(url=f"{WEBAPP_URL}?action=create")),
+            InlineKeyboardButton(text="📱 Приложение", web_app=WebAppInfo(url=WEBAPP_URL))
+        ],
+        [
+            InlineKeyboardButton(text="📋 Мои лоты", web_app=WebAppInfo(url=f"{WEBAPP_URL}?tab=profile")),
+            InlineKeyboardButton(text="👤 Профиль", web_app=WebAppInfo(url=f"{WEBAPP_URL}?tab=profile"))
+        ],
+        [
+            InlineKeyboardButton(text="❓ Помощь", callback_data="help"),
+            InlineKeyboardButton(text="📢 Канал", url="https://t.me/telegram")
+        ]
+    ])
+    
+    text = (
+        f"👋 Привет, <b>{message.from_user.first_name}</b>!\n\n"
+        "<b>CyberTrade</b> — купи-продай технику без посредников.\n\n"
+        "📦 Выложи первый лот — это займёт минуту 👇"
+    )
+    await message.answer(text, parse_mode="HTML", reply_markup=kb)
+
+async def main():
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())</pre>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- BOTTOM NAVIGATION BAR (Screenshot 2/3 Style)-->
+        <!-- ========================================== -->
+        <div id="bottom-nav-wrap" class="fixed bottom-3 left-1/2 -translate-x-1/2 w-full max-w-[420px] px-4 z-30 flex items-center gap-2.5">
+            <!-- Pill Nav -->
+            <div class="flex-1 h-14 glass-nav border border-turq/25 rounded-full flex items-center justify-around px-4 shadow-2xl">
+                <button onclick="switchAppTab('home')" id="nav-btn-home" class="relative p-2 text-turq flex flex-col items-center">
+                    <i data-lucide="home" class="w-5 h-5"></i>
+                    <span id="nav-dot-home" class="w-1.5 h-1.5 rounded-full bg-turq mt-1"></span>
+                </button>
+                <button onclick="switchAppTab('feed')" id="nav-btn-feed" class="relative p-2 text-slate-400 hover:text-white flex flex-col items-center">
+                    <i data-lucide="layers" class="w-5 h-5"></i>
+                    <span id="nav-dot-feed" class="hidden w-1.5 h-1.5 rounded-full bg-turq mt-1"></span>
+                </button>
+                <button onclick="switchAppTab('profile')" id="nav-btn-profile" class="relative p-2 text-slate-400 hover:text-white flex flex-col items-center">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                    <span id="nav-dot-profile" class="hidden w-1.5 h-1.5 rounded-full bg-turq mt-1"></span>
+                </button>
+            </div>
+            <!-- Floating Plus Button -->
+            <button onclick="openCreateModal()" class="w-14 h-14 rounded-full bg-bgCard border-2 border-turq text-turq hover:bg-turq hover:text-black flex items-center justify-center shadow-lg shadow-turq/20 active:scale-90 transition shrink-0">
+                <i data-lucide="plus" class="w-6 h-6 stroke-[2.5]"></i>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL 1: ВЫЛОЖИТЬ ОБЪЯВЛЕНИЕ (+ ПРОДАТЬ)   -->
+    <!-- ========================================== -->
+    <div id="modal-create" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-bgCard border-t sm:border border-turq/30 rounded-t-3xl sm:rounded-3xl w-full max-w-[430px] max-h-[92vh] overflow-y-auto p-5 space-y-4">
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 class="text-lg font-extrabold text-white flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-turq"></span>
+                    Разместить объявление
+                </h3>
+                <button onclick="closeModal('modal-create')" class="p-1.5 rounded-xl bg-white/5 text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="create-listing-form" onsubmit="submitListing(event)" class="space-y-3.5">
+                
+                <!-- Photo Upload Box -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Фотография товара</label>
+                    <label for="listing-photo-input" class="cursor-pointer block border-2 border-dashed border-turq/35 hover:border-turq rounded-2xl p-4 text-center bg-bgInput transition relative overflow-hidden">
+                        <input type="file" id="listing-photo-input" accept="image/*" class="hidden" onchange="previewUploadedImage(event)">
+                        <div id="photo-upload-placeholder" class="flex flex-col items-center justify-center py-2">
+                            <i data-lucide="camera" class="w-7 h-7 text-turq mb-1.5"></i>
+                            <span class="text-xs font-bold text-white">Нажмите, чтобы загрузить фото</span>
+                            <span class="text-[11px] text-slate-500 mt-0.5">С телефона или компьютера</span>
+                        </div>
+                        <img id="photo-preview-img" src="" alt="Preview" class="hidden w-full h-44 object-cover rounded-xl">
+                    </label>
+                </div>
+
+                <!-- Category Selector -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Тип объявления</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="category" value="Продам" checked class="peer hidden">
+                            <div class="py-2 rounded-xl border border-white/10 bg-bgInput peer-checked:bg-turq peer-checked:text-black peer-checked:border-turq text-center text-xs font-bold transition">
+                                Продам
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="category" value="Обмен" class="peer hidden">
+                            <div class="py-2 rounded-xl border border-white/10 bg-bgInput peer-checked:bg-turq peer-checked:text-black peer-checked:border-turq text-center text-xs font-bold transition">
+                                Обмен
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="category" value="Куплю" class="peer hidden">
+                            <div class="py-2 rounded-xl border border-white/10 bg-bgInput peer-checked:bg-turq peer-checked:text-black peer-checked:border-turq text-center text-xs font-bold transition">
+                                Куплю
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Title -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Название товара *</label>
+                    <input type="text" id="listing-title" required placeholder="Например: iPhone 15 Pro 256GB" class="w-full bg-bgInput border border-white/10 focus:border-turq rounded-xl px-3.5 py-2.5 text-sm text-white outline-none">
+                </div>
+
+                <!-- Price & City Row -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Цена (₽) *</label>
+                        <input type="number" id="listing-price" required min="0" placeholder="45000" class="w-full bg-bgInput border border-white/10 focus:border-turq rounded-xl px-3.5 py-2.5 text-sm text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Город *</label>
+                        <input type="text" id="listing-city" required value="Москва" class="w-full bg-bgInput border border-white/10 focus:border-turq rounded-xl px-3.5 py-2.5 text-sm text-white outline-none">
+                    </div>
+                </div>
+
+                <!-- Seller Telegram Contact -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Ваш Telegram (@username для связи)</label>
+                    <input type="text" id="listing-contact" placeholder="@username" class="w-full bg-bgInput border border-white/10 focus:border-turq rounded-xl px-3.5 py-2.5 text-sm text-white outline-none">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Описание / состояние</label>
+                    <textarea id="listing-desc" rows="3" placeholder="Комплект, состояние АКБ, возможен ли торг или обмен..." class="w-full bg-bgInput border border-white/10 focus:border-turq rounded-xl px-3.5 py-2.5 text-sm text-white outline-none resize-none"></textarea>
+                </div>
+
+                <!-- Pin Checkbox -->
+                <label class="flex items-center justify-between bg-bgInput border border-turq/25 rounded-2xl p-3 cursor-pointer">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="star" class="w-4 h-4 text-turq fill-turq"></i>
+                        <div>
+                            <span class="text-xs font-bold text-white block">Добавить «В закреп»</span>
+                            <span class="text-[11px] text-slate-400">Объявление будет наверху главной страницы</span>
+                        </div>
+                    </div>
+                    <input type="checkbox" id="listing-pinned" class="w-4 h-4 accent-[#00e5ff] rounded">
+                </label>
+
+                <button type="submit" class="w-full py-3.5 rounded-2xl turq-gradient text-black font-black text-sm shadow-lg shadow-turq/25 active:scale-98 transition">
+                    Опубликовать в ленту
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL 2: ПРОСМОТР ОБЪЯВЛЕНИЯ               -->
+    <!-- ========================================== -->
+    <div id="modal-detail" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div id="detail-content" class="bg-bgCard border-t sm:border border-turq/30 rounded-t-3xl sm:rounded-3xl w-full max-w-[430px] max-h-[90vh] overflow-y-auto p-5 space-y-4">
+            <!-- Populated via JS -->
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL 3: ВЫБОР ГОРОДА                      -->
+    <!-- ========================================== -->
+    <div id="modal-city" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-bgCard border border-turq/30 rounded-3xl w-full max-w-[360px] p-5 space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-white">Выберите город</h3>
+                <button onclick="closeModal('modal-city')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="selectCity('Все города')" class="py-2.5 px-3 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition">🌍 Все города</button>
+                <button onclick="selectCity('Москва')" class="py-2.5 px-3 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition">Москва</button>
+                <button onclick="selectCity('Санкт-Петербург')" class="py-2.5 px-3 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition">Санкт-Петербург</button>
+                <button onclick="selectCity('Казань')" class="py-2.5 px-3 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition">Казань</button>
+                <button onclick="selectCity('Екатеринбург')" class="py-2.5 px-3 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition">Екатеринбург</button>
+                <button onclick="selectCity('Новосибирск')" class="py-2.5 px-3 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition">Новосибирск</button>
+                <button onclick="selectCity('Краснодар')" class="py-2.5 px-3 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition">Краснодар</button>
+                <button onclick="selectCity('Хабаровск')" class="py-2.5 px-3 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition">Хабаровск</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL 4: ПРОВЕРКА IMEI                     -->
+    <!-- ========================================== -->
+    <div id="modal-imei" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-bgCard border border-turq/30 rounded-3xl w-full max-w-[380px] p-5 space-y-3.5">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i data-lucide="scan-barcode" class="w-5 h-5 text-turq"></i> Проверка IMEI
+                </h3>
+                <button onclick="closeModal('modal-imei')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <p class="text-xs text-slate-400">Введите 15-значный IMEI устройства (наберите *#06# на телефоне) для проверки контрольной суммы Luhn.</p>
+            <input type="text" id="imei-input" maxlength="15" placeholder="356938035643809" class="w-full bg-bgInput border border-white/10 focus:border-turq rounded-xl px-3.5 py-2.5 text-sm text-white font-mono outline-none">
+            <div id="imei-result" class="hidden text-xs p-3 rounded-xl"></div>
+            <button onclick="checkImei()" class="w-full py-2.5 rounded-xl turq-gradient text-black font-bold text-xs">Проверить устройство</button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL 5: СОРТИРОВКА И ФИЛЬТРЫ              -->
+    <!-- ========================================== -->
+    <div id="modal-filter" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-bgCard border border-turq/30 rounded-3xl w-full max-w-[360px] p-5 space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-white">Сортировка</h3>
+                <button onclick="closeModal('modal-filter')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-2">
+                <button onclick="setSortOrder('newest')" class="w-full py-2.5 px-3.5 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition flex justify-between">
+                    <span>Сначала новые</span>
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                </button>
+                <button onclick="setSortOrder('price_asc')" class="w-full py-2.5 px-3.5 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition flex justify-between">
+                    <span>Сначала дешевле</span>
+                    <i data-lucide="arrow-down-narrow-wide" class="w-4 h-4"></i>
+                </button>
+                <button onclick="setSortOrder('price_desc')" class="w-full py-2.5 px-3.5 rounded-xl bg-bgInput hover:bg-turq hover:text-black text-xs font-semibold text-left transition flex justify-between">
+                    <span>Сначала дороже</span>
+                    <i data-lucide="arrow-up-wide-narrow" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-box" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 hidden bg-bgCard border border-turq text-white px-4 py-2.5 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-turq"></span>
+        <span id="toast-text">Уведомление</span>
+    </div>
+
+    <script>
+        // =========================================================
+        // STATE MANAGEMENT — STARTS 100% EMPTY (NO MOCK LISTINGS!)
+        // =========================================================
+        const STORAGE_KEY = 'cybertrade_user_listings_v1';
+        let listings = [];
+        let currentCity = 'Москва';
+        let activeCategory = 'all';
+        let cityFilterOnly = false;
+        let searchQuery = '';
+        let sortOrder = 'newest';
+        let uploadedImageBase64 = '';
+        let profileSubtab = 'my';
+
+        // Initialize Telegram WebApp if running inside Telegram
+        function initTelegram() {
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const tg = window.Telegram.WebApp;
+                    tg.ready();
+                    tg.expand();
+                    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                        const firstName = tg.initDataUnsafe.user.first_name || 'Пользователь';
+                        document.getElementById('user-name-display').textContent = firstName;
+                        document.getElementById('profile-username').textContent = firstName;
+                    }
+                }
+            } catch (e) {
+                console.warn('Telegram WebApp API not detected, running in browser mode.');
+            }
+        }
+
+        // Load only user-created listings from localStorage (starts empty [])
+        function loadListings() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                listings = raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                listings = [];
+            }
+        }
+
+        function saveListings() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
+            } catch (e) {
+                showToast('Память браузера переполнена, уменьшите размер фото');
+            }
+        }
+
+        // Format price with spaces (e.g. 45 000 ₽)
+        function formatPrice(num) {
+            const n = Number(num) || 0;
+            return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + ' ₽';
+        }
+
+        // Relative time formatter
+        function timeAgo(timestamp) {
+            const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+            if (diffSec < 60) return 'только что';
+            const min = Math.floor(diffSec / 60);
+            if (min < 60) return `${min} мин`;
+            const hrs = Math.floor(min / 60);
+            if (hrs < 24) return `${hrs} ч`;
+            return `${Math.floor(hrs / 24)} дн`;
+        }
+
+        // =========================================================
+        // RENDER ALL COUNTERS, PINNED & FEED
+        // =========================================================
+        function renderAll() {
+            // Update Dashboard Stats based on actual user listings
+            const totalCount = listings.length;
+            const cityCount = listings.filter(item => item.city.toLowerCase() === currentCity.toLowerCase()).length;
+            const tradeCount = listings.filter(item => item.category === 'Обмен').length;
+            const buyCount = listings.filter(item => item.category === 'Куплю').length;
+            const pinnedList = listings.filter(item => item.pinned);
+
+            // Search placeholder with dynamic count
+            const searchInput = document.getElementById('search-input');
+            searchInput.placeholder = `Поиск по ${totalCount} объявлениям`;
+
+            // Bento Counters
+            document.getElementById('stat-new-count').textContent = `${totalCount} новых продаж`;
+            document.getElementById('stat-city-count').textContent = currentCity === 'Все города' ? `${totalCount} везде` : `${cityCount} в городе`;
+            document.getElementById('stat-trade-count').textContent = `${tradeCount} предложений`;
+            document.getElementById('stat-buy-count').textContent = `${buyCount} ищут`;
+
+            // Pinned Section
+            document.getElementById('pinned-counter').textContent = `${pinnedList.length} в закрепе`;
+            renderPinned(pinnedList);
+
+            // Filtered Feed
+            let filtered = [...listings];
+
+            if (activeCategory !== 'all') {
+                filtered = filtered.filter(i => i.category === activeCategory);
+            }
+            if (cityFilterOnly && currentCity !== 'Все города') {
+                filtered = filtered.filter(i => i.city.toLowerCase() === currentCity.toLowerCase());
+            }
+            if (searchQuery.trim() !== '') {
+                const q = searchQuery.toLowerCase();
+                filtered = filtered.filter(i => 
+                    i.title.toLowerCase().includes(q) || 
+                    i.city.toLowerCase().includes(q) ||
+                    (i.desc && i.desc.toLowerCase().includes(q))
+                );
+            }
+
+            // Sort
+            if (sortOrder === 'newest') {
+                filtered.sort((a, b) => b.createdAt - a.createdAt);
+            } else if (sortOrder === 'price_asc') {
+                filtered.sort((a, b) => Number(a.price) - Number(b.price));
+            } else if (sortOrder === 'price_desc') {
+                filtered.sort((a, b) => Number(b.price) - Number(a.price));
+            }
+
+            document.getElementById('feed-total-badge').textContent = filtered.length;
+            renderFeedGrid(filtered);
+            renderProfileSection();
+            lucide.createIcons();
+        }
+
+        function renderPinned(pinnedList) {
+            const container = document.getElementById('pinned-container');
+            if (pinnedList.length === 0) {
+                container.innerHTML = `
+                    <div onclick="openCreateModal(true)" class="w-full border border-dashed border-turq/35 bg-bgCard/50 hover:bg-bgCard rounded-3xl p-4 flex items-center justify-between cursor-pointer transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-turq/10 border border-turq/30 flex items-center justify-center text-turq">
+                                <i data-lucide="pin" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-white">Свободное место в закрепе</h4>
+                                <p class="text-[11px] text-slate-400">Закрепи свой лот — его увидят все первым</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-turq"></i>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = pinnedList.map(item => `
+                <div onclick="openDetailModal('${item.id}')" class="min-w-[230px] max-w-[230px] bg-bgCard border border-turq/40 rounded-3xl overflow-hidden cursor-pointer relative group shrink-0 shadow-lg shadow-turq/5">
+                    <div class="h-28 bg-bgInput relative overflow-hidden">
+                        ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover" alt="">` : `
+                            <div class="w-full h-full flex items-center justify-center text-turq/40">
+                                <i data-lucide="smartphone" class="w-8 h-8"></i>
+                            </div>
+                        `}
+                        <span class="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-black/75 backdrop-blur-md border border-turq/40 text-turq text-[10px] font-bold flex items-center gap-1">
+                            ★ Закреп
+                        </span>
+                    </div>
+                    <div class="p-3">
+                        <div class="text-sm font-black text-turq">${formatPrice(item.price)}</div>
+                        <div class="text-xs font-semibold text-white truncate mt-0.5">${escapeHtml(item.title)}</div>
+                        <div class="text-[10px] text-slate-400 mt-1">${escapeHtml(item.city)} • ${timeAgo(item.createdAt)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderFeedGrid(items) {
+            const grid = document.getElementById('listings-grid');
+            const emptyState = document.getElementById('empty-feed-state');
+
+            if (items.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            grid.innerHTML = items.map(item => createCardHtml(item)).join('');
+        }
+
+        function createCardHtml(item) {
+            const badgeColor = item.category === 'Обмен' 
+                ? 'bg-purple-500/20 text-purple-300 border-purple-400/30' 
+                : item.category === 'Куплю' 
+                ? 'bg-amber-500/20 text-amber-300 border-amber-400/30' 
+                : 'bg-turq/20 text-turq border-turq/30';
+
+            return `
+                <div onclick="openDetailModal('${item.id}')" class="bg-bgCard border border-white/10 hover:border-turq/40 rounded-3xl p-2.5 flex flex-col justify-between cursor-pointer active:scale-[0.98] transition group">
+                    <div>
+                        <div class="h-36 rounded-2xl bg-bgInput relative overflow-hidden mb-2.5">
+                            ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="">` : `
+                                <div class="w-full h-full flex flex-col items-center justify-center text-slate-600">
+                                    <i data-lucide="smartphone" class="w-9 h-9 text-turq/40 mb-1"></i>
+                                    <span class="text-[10px] text-slate-500">Без фото</span>
+                                </div>
+                            `}
+                            <!-- Favorite Heart Button -->
+                            <button onclick="toggleFavorite(event, '${item.id}')" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/65 backdrop-blur-md flex items-center justify-center ${item.favorite ? 'text-turq' : 'text-white/80'} hover:scale-110 transition">
+                                <i data-lucide="heart" class="w-4 h-4 ${item.favorite ? 'fill-turq' : ''}"></i>
+                            </button>
+                            <!-- Category Tag -->
+                            <span class="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg backdrop-blur-md border text-[10px] font-bold ${badgeColor}">
+                                ${escapeHtml(item.category)}
+                            </span>
+                        </div>
+                        <div class="px-1">
+                            <div class="text-base font-black text-turq tracking-tight leading-tight">${formatPrice(item.price)}</div>
+                            <h4 class="text-xs font-semibold text-white truncate mt-1">${escapeHtml(item.title)}</h4>
+                        </div>
+                    </div>
+                    <div class="px-1 pt-2 flex items-center justify-between text-[11px] text-slate-400">
+                        <span class="truncate">${escapeHtml(item.city)} • ${timeAgo(item.createdAt)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // =========================================================
+        // CREATE NEW LISTING
+        // =========================================================
+        function openCreateModal(precheckPin = false) {
+            document.getElementById('create-listing-form').reset();
+            document.getElementById('listing-city').value = currentCity === 'Все города' ? 'Москва' : currentCity;
+            document.getElementById('listing-pinned').checked = precheckPin;
+            uploadedImageBase64 = '';
+            document.getElementById('photo-preview-img').classList.add('hidden');
+            document.getElementById('photo-upload-placeholder').classList.remove('hidden');
+            openModal('modal-create');
+        }
+
+        function previewUploadedImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedImageBase64 = e.target.result;
+                const img = document.getElementById('photo-preview-img');
+                img.src = uploadedImageBase64;
+                img.classList.remove('hidden');
+                document.getElementById('photo-upload-placeholder').classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function submitListing(e) {
+            e.preventDefault();
+            const title = document.getElementById('listing-title').value.trim();
+            const price = document.getElementById('listing-price').value.trim();
+            const city = document.getElementById('listing-city').value.trim() || 'Москва';
+            const contact = document.getElementById('listing-contact').value.trim() || '@user';
+            const desc = document.getElementById('listing-desc').value.trim();
+            const pinned = document.getElementById('listing-pinned').checked;
+            const categoryRadio = document.querySelector('input[name="category"]:checked');
+            const category = categoryRadio ? categoryRadio.value : 'Продам';
+
+            if (!title || price === '') return;
+
+            const newItem = {
+                id: 'lot_' + Date.now(),
+                title,
+                price: Number(price),
+                city,
+                contact,
+                desc,
+                category,
+                pinned,
+                favorite: false,
+                image: uploadedImageBase64,
+                createdAt: Date.now()
+            };
+
+            listings.unshift(newItem);
+            saveListings();
+            closeModal('modal-create');
+            renderAll();
+            showToast('Объявление опубликовано!');
+        }
+
+        // =========================================================
+        // DETAIL MODAL & DELETE / FAVORITE
+        // =========================================================
+        function openDetailModal(id) {
+            const item = listings.find(i => i.id === id);
+            if (!item) return;
+
+            const container = document.getElementById('detail-content');
+            container.innerHTML = `
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <span class="px-2.5 py-1 rounded-lg bg-turq/15 border border-turq/30 text-turq text-xs font-bold">${escapeHtml(item.category)}</span>
+                    <button onclick="closeModal('modal-detail')" class="p-1.5 rounded-xl bg-white/5 text-slate-400 hover:text-white">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="h-56 rounded-2xl bg-bgInput overflow-hidden flex items-center justify-center">
+                    ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover" alt="">` : `
+                        <div class="text-center text-slate-500">
+                            <i data-lucide="smartphone" class="w-12 h-12 text-turq/40 mx-auto mb-1"></i>
+                            <span class="text-xs">Без фотографии</span>
+                        </div>
+                    `}
+                </div>
+
+                <div>
+                    <div class="text-2xl font-black text-turq">${formatPrice(item.price)}</div>
+                    <h2 class="text-lg font-bold text-white mt-1">${escapeHtml(item.title)}</h2>
+                    <p class="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-turq"></i> ${escapeHtml(item.city)} • размещено ${timeAgo(item.createdAt)}
+                    </p>
+                </div>
+
+                <div class="bg-bgInput border border-white/5 rounded-2xl p-3.5 text-xs text-slate-300 leading-relaxed">
+                    ${item.desc ? escapeHtml(item.desc) : 'Описание не указано продавцом.'}
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="showToast('Связь с продавцом: ${escapeHtml(item.contact)}')" class="flex-1 py-3 rounded-2xl turq-gradient text-black font-extrabold text-xs flex items-center justify-center gap-1.5">
+                        <i data-lucide="send" class="w-4 h-4"></i> Написать (${escapeHtml(item.contact)})
+                    </button>
+                    <button onclick="deleteListing('${item.id}')" class="px-4 py-3 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 font-bold text-xs flex items-center justify-center">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `;
+            openModal('modal-detail');
+            lucide.createIcons();
+        }
+
+        function toggleFavorite(event, id) {
+            event.stopPropagation();
+            const item = listings.find(i => i.id === id);
+            if (!item) return;
+            item.favorite = !item.favorite;
+            saveListings();
+            renderAll();
+        }
+
+        function deleteListing(id) {
+            listings = listings.filter(i => i.id !== id);
+            saveListings();
+            closeModal('modal-detail');
+            renderAll();
+            showToast('Объявление удалено');
+        }
+
+        function clearAllListings() {
+            listings = [];
+            saveListings();
+            renderAll();
+            showToast('Все объявления очищены');
+        }
+
+        // =========================================================
+        // FILTERS, SEARCH & NAVIGATION
+        // =========================================================
+        function filterByCategory(cat, label) {
+            activeCategory = cat;
+            cityFilterOnly = false;
+            updateCategoryButtons(cat);
+            const bar = document.getElementById('active-filter-bar');
+            const tag = document.getElementById('active-filter-tag');
+
+            if (cat === 'all') {
+                bar.classList.add('hidden');
+            } else {
+                bar.classList.remove('hidden');
+                tag.innerHTML = `${label} <button onclick="resetFilters()" class="ml-1 hover:text-white">✕</button>`;
+            }
+            renderAll();
+        }
+
+        function filterByCityOnly() {
+            cityFilterOnly = true;
+            activeCategory = 'all';
+            const bar = document.getElementById('active-filter-bar');
+            const tag = document.getElementById('active-filter-tag');
+            bar.classList.remove('hidden');
+            tag.innerHTML = `Рядом (${currentCity}) <button onclick="resetFilters()" class="ml-1 hover:text-white">✕</button>`;
+            renderAll();
+        }
+
+        function resetFilters() {
+            activeCategory = 'all';
+            cityFilterOnly = false;
+            document.getElementById('active-filter-bar').classList.add('hidden');
+            updateCategoryButtons('all');
+            renderAll();
+        }
+
+        function updateCategoryButtons(cat) {
+            const map = {
+                'all': 'cat-btn-all',
+                'Продам': 'cat-btn-sell',
+                'Обмен': 'cat-btn-trade',
+                'Куплю': 'cat-btn-buy'
+            };
+            Object.entries(map).forEach(([key, btnId]) => {
+                const btn = document.getElementById(btnId);
+                if (!btn) return;
+                if (key === cat) {
+                    btn.className = 'px-2.5 py-1 rounded-lg bg-turq text-black font-bold transition';
+                } else {
+                    btn.className = 'px-2.5 py-1 rounded-lg bg-bgCard text-slate-400 hover:text-white font-medium transition';
+                }
+            });
+        }
+
+        function handleSearch(val) {
+            searchQuery = val;
+            document.getElementById('clear-search-btn').classList.toggle('hidden', val.length === 0);
+            renderAll();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            handleSearch('');
+        }
+
+        function selectCity(city) {
+            currentCity = city;
+            document.getElementById('current-city-label').textContent = city;
+            closeModal('modal-city');
+            renderAll();
+        }
+
+        function setSortOrder(order) {
+            sortOrder = order;
+            closeModal('modal-filter');
+            renderAll();
+            showToast('Сортировка обновлена');
+        }
+
+        // Bottom Bar Tab Switching
+        function switchAppTab(tab) {
+            const homeEl = document.getElementById('tab-home');
+            const feedEl = document.getElementById('feed-section');
+            const profEl = document.getElementById('tab-profile');
+
+            // Reset nav styling
+            ['home', 'feed', 'profile'].forEach(t => {
+                document.getElementById(`nav-btn-${t}`).className = 'relative p-2 text-slate-400 hover:text-white flex flex-col items-center';
+                document.getElementById(`nav-dot-${t}`).classList.add('hidden');
+            });
+
+            document.getElementById(`nav-btn-${tab}`).className = 'relative p-2 text-turq flex flex-col items-center';
+            document.getElementById(`nav-dot-${tab}`).classList.remove('hidden');
+
+            if (tab === 'home') {
+                homeEl.classList.remove('hidden');
+                feedEl.classList.remove('hidden');
+                profEl.classList.add('hidden');
+            } else if (tab === 'feed') {
+                homeEl.classList.add('hidden');
+                feedEl.classList.remove('hidden');
+                profEl.classList.add('hidden');
+            } else if (tab === 'profile') {
+                homeEl.classList.add('hidden');
+                feedEl.classList.add('hidden');
+                profEl.classList.remove('hidden');
+                renderProfileSection();
+            }
+            lucide.createIcons();
+        }
+
+        function switchProfileSubtab(sub) {
+            profileSubtab = sub;
+            document.getElementById('prof-sub-my').className = sub === 'my' 
+                ? 'flex-1 py-2 rounded-xl text-xs font-bold bg-turq text-black transition'
+                : 'flex-1 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition';
+            document.getElementById('prof-sub-fav').className = sub === 'fav' 
+                ? 'flex-1 py-2 rounded-xl text-xs font-bold bg-turq text-black transition'
+                : 'flex-1 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition';
+            renderProfileSection();
+            lucide.createIcons();
+        }
+
+        function renderProfileSection() {
+            const favList = listings.filter(i => i.favorite);
+            const pinList = listings.filter(i => i.pinned);
+
+            document.getElementById('prof-stat-total').textContent = listings.length;
+            document.getElementById('prof-stat-fav').textContent = favList.length;
+            document.getElementById('prof-stat-pinned').textContent = pinList.length;
+
+            const targetList = profileSubtab === 'my' ? listings : favList;
+            const grid = document.getElementById('profile-listings-grid');
+            const emptyMsg = document.getElementById('profile-empty-msg');
+
+            if (targetList.length === 0) {
+                grid.innerHTML = '';
+                emptyMsg.classList.remove('hidden');
+            } else {
+                emptyMsg.classList.add('hidden');
+                grid.innerHTML = targetList.map(i => createCardHtml(i)).join('');
+            }
+        }
+
+        // Top Mode Switcher (Mini App / Bot Chat / Python Code)
+        function switchMode(mode) {
+            ['webapp', 'tgchat', 'botcode'].forEach(m => {
+                document.getElementById(`view-${m}`).classList.add('hidden');
+                document.getElementById(`mode-${m}`).className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center justify-center gap-1.5';
+            });
+            document.getElementById(`view-${mode}`).classList.remove('hidden');
+            document.getElementById(`mode-${mode}`).className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all bg-turq text-black shadow-sm flex items-center justify-center gap-1.5';
+            document.getElementById('bottom-nav-wrap').classList.toggle('hidden', mode !== 'webapp');
+            lucide.createIcons();
+        }
+
+        // IMEI Checker
+        function checkImei() {
+            const val = document.getElementById('imei-input').value.replace(/\D/g, '');
+            const res = document.getElementById('imei-result');
+            res.classList.remove('hidden');
+
+            if (val.length !== 15) {
+                res.className = 'text-xs p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300';
+                res.textContent = 'Ошибка: IMEI должен состоять ровно из 15 цифр.';
+                return;
+            }
+            res.className = 'text-xs p-3 rounded-xl bg-turq/15 border border-turq/30 text-turq font-semibold';
+            res.textContent = `✓ IMEI ${val} корректен. В базе утерянных не числится.`;
+        }
+
+        // Copy Python Code
+        function copyBotCode() {
+            const code = document.getElementById('python-code-block').innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = code;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('Код bot.py скопирован в буфер обмена!');
+        }
+
+        // Modal & Toast Helpers
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+        function showToast(msg) {
+            const box = document.getElementById('toast-box');
+            document.getElementById('toast-text').textContent = msg;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 2600);
+        }
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            initTelegram();
+            loadListings();
+            renderAll();
+        };
+    </script>
+</body>
+  </html>
